@@ -19,9 +19,19 @@ public class PlayerController : MonoBehaviour
     private float coyoteTime = 0.5f;
     private float coyoteTimeCounter = 0f;
 
+
+    private float originalHeight;
+    private Vector3 originalCenter;
+    private float originalSpeed;
+    private bool isCrouching = false;
+
     void Start()
     {
         controller = GetComponent<CharacterController>();
+        // Sauvegarder les valeurs originales pour le crouch
+        originalHeight = controller.height;
+        originalCenter = controller.center;
+        originalSpeed = speed;
     }
 
     // Déplacement (Vector 2)
@@ -30,7 +40,6 @@ public class PlayerController : MonoBehaviour
         moveInput = value.Get<Vector2>();
     }
 
-    // Saut (Bouton) - Appelé automatiquement par le Player Input lors de l'appui sur Espace
     void OnJump()
     {
         // Autoriser le saut si on est au sol ou si le compteur de coyote est encore positif
@@ -41,6 +50,10 @@ public class PlayerController : MonoBehaviour
             coyoteTimeCounter = 0f; // consommer le coyote time
         }
     }
+
+
+
+
 
     void Update()
     {
