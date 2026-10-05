@@ -25,6 +25,21 @@ public class PlayerController : MonoBehaviour
     private float originalSpeed;
     private bool isCrouching = false;
 
+    [Header("Crouch Renderer")]
+    // Référence à l'enfant qui contient le Renderer (sera scale pour l'effet de crouch)
+    public Transform rendererChild;
+    // Multiplicateur d'échelle sur l'axe Y pour le renderer (ex: 0.5 pour moitié)
+    public float rendererCrouchYMultiplier = 0.5f;
+    // Vitesse de lissage de l'échelle
+    public float rendererScaleSmooth = 10f;
+    // Vitesse de déplacement pendant le crouch
+    public float crouchSpeedMultiplier = 0.5f;
+    // Vérification avant de se relever
+    public float standUpCheckRadius = 0.15f;
+    public LayerMask ceilingMask = ~0;
+    private Vector3 originalRendererScale;
+    private Vector3 targetRendererScale;
+
     void Start()
     {
         controller = GetComponent<CharacterController>();
@@ -32,7 +47,58 @@ public class PlayerController : MonoBehaviour
         originalHeight = controller.height;
         originalCenter = controller.center;
         originalSpeed = speed;
+        if (rendererChild != null)
+        {
+            originalRendererScale = rendererChild.localScale;
+            targetRendererScale = originalRendererScale;
+        }
+
     }
+    // Action crouch (toggle)
+    void OnCrouch()
+    {
+        if (isCrouching)
+            TryStopCrouch();
+        else
+            StartCrouch();
+    }
+
+    void StartCrouch()
+    {
+        if (isCrouching) return;
+        // visuel: réduire l'échelle de l'enfant renderer
+        if (rendererChild != null)
+        {
+            targetRendererScale = new Vector3(originalRendererScale.x, originalRendererScale.y * rendererCrouchYMultiplier, originalRendererScale.z);
+        }
+        // mouvement: réduire la vitesse
+        speed = originalSpeed * crouchSpeedMultiplier;
+        isCrouching = true;
+    }
+
+    void TryStopCrouch()
+    {
+        // Vérifier qu'il n'y a pas d'obstacle au-dessus avant de se relever
+        Vector3 headPosition = transform.position + controller.center + Vector3.up * (originalHeight / 2f);
+        bool blocked = Physics.CheckSphere(headPosition, standUpCheckRadius, ceilingMask, QueryTriggerInteraction.Ignore);
+        if (!blocked)
+        {
+            StopCrouch();
+        }
+        // sinon rester accroupi
+    }
+
+    void StopCrouch()
+    {
+        if (!isCrouching) return;
+        if (rendererChild != null)
+        {
+            targetRendererScale = originalRendererScale;
+        }
+        speed = originalSpeed;
+        isCrouching = false;
+    }
+    
 
     // Déplacement (Vector 2)
     void OnMove(InputValue value)
@@ -83,5 +149,11 @@ public class PlayerController : MonoBehaviour
 
 
         controller.Move(playerVelocity * Time.deltaTime);
+
+        // Lissage de l'échelle du renderer child si nécessaire
+        if (rendererChild != null)
+        {
+            rendererChild.localScale = Vector3.Lerp(rendererChild.localScale, targetRendererScale, Mathf.Clamp01(rendererScaleSmooth * Time.deltaTime));
+        }
     }
 }
